@@ -27,45 +27,51 @@ let latestData = {
 // Verbundene Clients
 const clients = new Set();
 
-// WebSocket-Verbindung
+// Im WebSocket-Handler auf dem Server
 wss.on('connection', (ws) => {
-  console.log('Neuer Client verbunden');
-  clients.add(ws);
-  
-  // Aktuelle Daten direkt senden
-  ws.send(JSON.stringify(latestData));
-  
-  // Nachrichtenverarbeitung
-  ws.on('message', (message) => {
-    try {
-      const data = JSON.parse(message);
-      
-      // ESP32 sendet Daten mit r, p, y Feldern
-      if ('r' in data && 'p' in data && 'y' in data) {
-        latestData = {
-          roll: data.r,
-          pitch: data.p,
-          yaw: data.y,
-          timestamp: Date.now()
-        };
-        
-        // An alle anderen Clients weiterleiten
-        clients.forEach((client) => {
-          if (client !== ws && client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify(latestData));
-          }
-        });
-      }
-    } catch (e) {
-      console.error('Fehler beim Verarbeiten der Nachricht:', e);
-    }
-  });
-  
-  // Verbindung geschlossen
-  ws.on('close', () => {
-    clients.delete(ws);
-    console.log('Client getrennt');
-  });
+    console.log('Neuer Client verbunden');
+    clients.add(ws);
+    
+    // Aktuelle Daten direkt senden
+    ws.send(JSON.stringify(latestData));
+    
+    // Nachrichtenverarbeitung
+    ws.on('message', (message) => {
+        try {
+            const data = JSON.parse(message);
+            
+            // Ping-Pong-Mechanismus
+            if (data.ping) {
+                ws.send(JSON.stringify({pong: true}));
+                return;
+            }
+            
+            // ESP32 sendet Daten mit r, p, y Feldern
+            if ('r' in data && 'p' in data && 'y' in data) {
+                latestData = {
+                    roll: data.r,
+                    pitch: data.p,
+                    yaw: data.y,
+                    timestamp: Date.now()
+                };
+                
+                // An alle anderen Clients weiterleiten
+                clients.forEach((client) => {
+                    if (client !== ws && client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify(latestData));
+                    }
+                });
+            }
+        } catch (e) {
+            console.error('Fehler beim Verarbeiten der Nachricht:', e);
+        }
+    });
+    
+    // Verbindung geschlossen
+    ws.on('close', () => {
+        clients.delete(ws);
+        console.log('Client getrennt');
+    });
 });
 
 // Server starten
