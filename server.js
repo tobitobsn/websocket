@@ -27,6 +27,21 @@ let latestData = {
 // Verbundene Clients
 const clients = new Set();
 
+// CORS-Header für WebSocket-Server
+const corsOptions = {
+  origin: '*', // Für Entwicklungszwecke; in Produktion die spezifische Domain angeben
+  methods: ['GET', 'POST'],
+  credentials: true
+};
+
+// Bei der HTTP-Server-Einrichtung
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  next();
+});
+
 // Im WebSocket-Handler auf dem Server
 wss.on('connection', (ws) => {
     console.log('Neuer Client verbunden');
